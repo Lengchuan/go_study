@@ -33,6 +33,18 @@ func main() {
 	v1 := reflect.ValueOf(&m.Id)
 	v1.Elem().SetInt(100)
 	fmt.Println(m.Id)
+
+	u2 := User{2, "lengchuan2", 100}
+	fmt.Println(u2.Name)
+	Set(&u2)
+	fmt.Println(u2.Name)
+
+	v2 := reflect.ValueOf(u2)
+	mv := v2.MethodByName("Hello1")
+
+	args := []reflect.Value{reflect.ValueOf("lengchuan")}
+	mv.Call(args)
+
 }
 
 type User struct {
@@ -49,6 +61,10 @@ type Manager struct {
 
 func (u User) Hello() {
 	fmt.Println("hello world")
+}
+
+func (u User) Hello1(name string) {
+	fmt.Println("hello world ", name)
 }
 
 func Info(o interface{}) {
@@ -78,4 +94,22 @@ func Info(o interface{}) {
 		fmt.Printf("%6s: %v\n", m.Name, m.Type)
 	}
 
+}
+
+func Set(o interface{}) {
+	v := reflect.ValueOf(o)
+	if v.Kind() == reflect.Ptr && !v.Elem().CanSet() {
+		fmt.Println("Can't set")
+		return
+	}
+
+	v = v.Elem()
+	f := v.FieldByName("Name")
+	if !f.IsValid() {
+		fmt.Println("Not filed 'Name'")
+		return
+	}
+	if f.Kind() == reflect.String {
+		f.SetString("Go Go!!!")
+	}
 }
