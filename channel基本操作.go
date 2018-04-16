@@ -9,7 +9,7 @@ func main() {
 
 	//time.Sleep(2 * time.Second)
 
-	c := make(chan bool, 1)
+	c := make(chan bool)
 	go func() {
 		fmt.Println("Go Go Go!!!")
 		//向channel里放入值
@@ -17,7 +17,7 @@ func main() {
 	}()
 
 	//从channel里取出值
-	<-c
+	//<-c
 
 	//for v := range c {
 	//	fmt.Println(v)
