@@ -46,34 +46,23 @@ func main() {
 	ai := NewAI(1, 1)
 
 	defer ai.Close()
-	done := false
-	ch := make(chan interface{}, 100)
-	defer close(ch)
-	for i := 0; i < 10000; i++ {
-		go func() {
+
+	wg := sync.WaitGroup{}
+	wg.Add(100000)
+	for i := 0; i < 100000; i++ {
+		go func(i int) {
 			id := ai.Id()
 			lock.Lock()
 			idmap[id] = id
-			ch <- id
 			lock.Unlock()
-		}()
+			wg.Done()
+		}(i)
 	}
 
-	count := 0
-	for !done {
-		select {
+	wg.Wait()
 
-		case <-ch:
-			count++
-			if count == 10000 {
-				done = true
-			}
-		}
+	if len(idmap) != 100000 {
+		panic("error")
 	}
-
-	if len(idmap) != 10000 {
-		panic("error ")
-	}
-
 	fmt.Println("exit 0 ")
 }
