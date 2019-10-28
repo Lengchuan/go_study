@@ -9,7 +9,7 @@ import (
 func FindPathByKey(j interface{}, key string) (paths []string, err error) {
 
 	var dumpJson func(j interface{}, key string, rootpath string)
-	paths = make([]string, 1, 10)
+	//paths = make([]string, 1, 10)
 
 	//
 	dumpJson = func(j interface{}, key string, rootpath string) {
@@ -61,7 +61,7 @@ func FindPathByKey(j interface{}, key string) (paths []string, err error) {
 //通过value 查找到 json path
 func FindPathByValue(j interface{}, value interface{}) (paths []string, err error) {
 	var dumpJson func(j interface{}, value interface{}, rootpath string)
-	paths = make([]string, 1, 10)
+	//paths = make([]string, 1, 10)
 
 	//
 	dumpJson = func(j interface{}, value interface{}, rootpath string) {

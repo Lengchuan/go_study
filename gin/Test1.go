@@ -24,6 +24,14 @@ func main() {
 		context.JSON(http.StatusOK, res)
 	})
 
+	router.POST("/test1", func(context *gin.Context) {
+		res := make(map[string]interface{}, 2)
+		res["status"] = 200
+		res["msg"] = "token"
+		res["token"] = "tokentokentokentokentoken"
+		context.JSON(http.StatusOK, res)
+	})
+
 	router.POST("/test2", func(context *gin.Context) {
 		var user User
 		context.BindJSON(&user)
@@ -31,6 +39,8 @@ func main() {
 		res["status"] = 200
 		res["msg"] = "test2test2"
 		res["id"] = user.Id
+		token := context.GetHeader("X-Auth-Token")
+		res["token"] = token
 		context.JSON(http.StatusOK, res)
 	})
 
