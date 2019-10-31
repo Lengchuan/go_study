@@ -24,10 +24,13 @@ func main() {
 	//serverHelloDone()
 
 	//6.Client Key Exchange
-	clientKeyExchange()
+	//clientKeyExchange()
 
 	//7. Change Cipher Spec
-	changeCipherSpec()
+	//changeCipherSpec()
+
+	//8. Encrypted Handshake Message
+	encryptedHandshakeMessage()
 }
 
 func clientHello() {
@@ -98,5 +101,9 @@ func clientKeyExchange() {
 }
 
 func changeCipherSpec() {
+	//
+}
+
+func encryptedHandshakeMessage() {
 	//
 }
