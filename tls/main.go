@@ -23,8 +23,11 @@ func main() {
 	//5. Server Hello Done
 	//serverHelloDone()
 
-	//6.clientKeyExchange
+	//6.Client Key Exchange
 	clientKeyExchange()
+
+	//7. Change Cipher Spec
+	changeCipherSpec()
 }
 
 func clientHello() {
@@ -92,4 +95,8 @@ func clientKeyExchange() {
 	m.unmarshal(flows[5:])
 	fmt.Println(m)
 	fmt.Println(m.ciphertext)
+}
+
+func changeCipherSpec() {
+	//
 }
