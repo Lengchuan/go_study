@@ -30,7 +30,10 @@ func main() {
 	//changeCipherSpec()
 
 	//8. Encrypted Handshake Message
-	encryptedHandshakeMessage()
+	//encryptedHandshakeMessage()
+
+	//9. New Session Ticket
+	newSessionTicket()
 }
 
 func clientHello() {
@@ -106,4 +109,13 @@ func changeCipherSpec() {
 
 func encryptedHandshakeMessage() {
 	//
+}
+
+func newSessionTicket() {
+	f, _ := os.Open("../go_study/tls/data/newSessionTicket.bin")
+	flows, _ := ioutil.ReadAll(f)
+	var m newSessionTicketMsg
+	m.unmarshal(flows[5:])
+	fmt.Println(m)
+	fmt.Println(m.ticket)
 }
