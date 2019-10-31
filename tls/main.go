@@ -33,7 +33,10 @@ func main() {
 	//encryptedHandshakeMessage()
 
 	//9. New Session Ticket
-	newSessionTicket()
+	//newSessionTicket()
+
+	//10. Application Data
+	applicationData()
 }
 
 func clientHello() {
@@ -118,4 +121,12 @@ func newSessionTicket() {
 	m.unmarshal(flows[5:])
 	fmt.Println(m)
 	fmt.Println(m.ticket)
+}
+
+func applicationData() {
+	f, _ := os.Open("../go_study/tls/data/applicationData.bin")
+	flows, _ := ioutil.ReadAll(f)
+	fmt.Println(flows[5:])
+	fmt.Println(string(flows[5:]))
+
 }
