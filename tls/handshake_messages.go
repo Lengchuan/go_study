@@ -366,7 +366,7 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 	//            Random: 91a500da9a11c68d0833573f960a9cf41999b73ddb91edc8... ---32字节
 	//                GMT Unix Time: Jun  7, 2047 16:46:18.000000000 中国标准时间 --- 时间 4字节
 	//                Random Bytes: 9a11c68d0833573f960a9cf41999b73ddb91edc88874d0db... --随机数 28字节
-	if !s.Skip(9) || // message type and uint24 length field
+	if !s.Skip(4) || // message type and uint24 length field
 		!s.ReadUint16(&m.vers) || !s.ReadBytes(&m.random, 32) ||
 		!readUint8LengthPrefixed(&s, &m.sessionId) {
 		return false
