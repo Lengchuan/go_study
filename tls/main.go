@@ -212,7 +212,8 @@ func Decode() {
 	clientKeyExchange := clientKeyExchange()
 	applicationData := applicationData()
 
-	serverCertificate, err := tls.LoadX509KeyPair("../go_study/tls/data/1.pem", "../go_study/tls/data/1.pem")
+	//serverCertificate, err := tls.LoadX509KeyPair("../go_study/tls/data/1.pem", "../go_study/tls/data/1.pem")
+	serverCertificate, err := tls.LoadX509KeyPair("../go_study/tls/server/http/www.lengchuan.study_chain.crt", "../go_study/tls/server/http/www.lengchuan.study_key.key")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -223,7 +224,8 @@ func Decode() {
 	clientRandom := clientHello.random
 	serverRandom := serverHello.random
 	//使用的密码套件
-	cipherSuiteid := serverHello.cipherSuite
+	//cipherSuiteid := serverHello.cipherSuite
+	cipherSuiteid := TLS_RSA_WITH_AES_256_GCM_SHA384
 	cipherSuite := cipherSuiteByID(cipherSuiteid)
 	//服务器私钥
 	//privateKey := serverCertificate.PrivateKey
@@ -267,6 +269,9 @@ func Decode() {
 
 	masterSecret := masterFromPreMasterSecret(version, cipherSuite, preMasterSecret, clientRandom, serverRandom)
 
+	fmt.Println("client random: ", clientRandom)
+	fmt.Println("len client random: ", len(clientRandom))
+	fmt.Println("server random: ", serverRandom)
 	fmt.Println("preMasterSecret: ", preMasterSecret)
 	fmt.Println("len(preMasterSecret): ", len(preMasterSecret))
 	fmt.Println("masterSecret: ", masterSecret)
@@ -274,26 +279,29 @@ func Decode() {
 	fmt.Println("len(applicationData): ", len(applicationData))
 
 	//clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV :=
-	_, serverMAC, _, serverKey, _, serverIV :=
+	clientMAC, _, clientKey, _, clientIV, _ :=
+		//_, serverMAC, _, serverKey, _, serverIV :=
 		keysFromMasterSecret(version, cipherSuite, masterSecret, clientRandom, serverRandom, cipherSuite.macLen, cipherSuite.keyLen, cipherSuite.ivLen)
 
-	var serverCipher interface{}
-	var serverHash macFunction
+	//var serverCipher interface{}
+	var clientCipher interface{}
+	//var serverHash macFunction
+	var clientHash macFunction
 
 	if cipherSuite.aead == nil {
-		//clientCipher = cipherSuite.cipher(clientKey, clientIV, true /* for reading */)
-		//clientHash = cipherSuite.mac(version, clientMAC)
-		serverCipher = cipherSuite.cipher(serverKey, serverIV, false /* not for reading */)
-		serverHash = cipherSuite.mac(version, serverMAC)
+		clientCipher = cipherSuite.cipher(clientKey, clientIV, true /* for reading */)
+		clientHash = cipherSuite.mac(version, clientMAC)
+		//serverCipher = cipherSuite.cipher(serverKey, serverIV, false /* not for reading */)
+		//serverHash = cipherSuite.mac(version, serverMAC)
 	} else {
-		//clientCipher = cipherSuite.aead(clientKey, clientIV)
-		serverCipher = cipherSuite.aead(serverKey, serverIV)
+		clientCipher = cipherSuite.aead(clientKey, clientIV)
+		//serverCipher = cipherSuite.aead(serverKey, serverIV)
 	}
 
 	var hc = &halfConn{
 		version:    version,
-		nextCipher: serverCipher,
-		nextMac:    serverHash,
+		nextCipher: clientCipher,
+		nextMac:    clientHash,
 		//seq:        bs,
 	}
 	hc.cipher = hc.nextCipher
@@ -353,12 +361,19 @@ func (hc *halfConn) decrypt(record []byte) ([]byte, recordType, error) {
 				additionalData[12] = byte(n)
 			}
 
+			fmt.Println("nonce: ", nonce)
+			fmt.Println("additionalData: ", additionalData)
+			fmt.Println("payload: ", payload)
+			fmt.Println(fmt.Sprintf("cipher %s:", c))
 			var err error
 			plaintext, err = c.Open(payload[:0], nonce, payload, additionalData)
 			if err != nil {
 				//return nil, 0, alertBadRecordMAC
 				return nil, 0, err
 			}
+
+			fmt.Println("plaintext ", plaintext)
+			fmt.Println("plaintext ", string(plaintext))
 		case cbcMode:
 			blockSize := c.BlockSize()
 			minPayload := explicitNonceLen + roundUp(hc.mac.Size()+1, blockSize)
