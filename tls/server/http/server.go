@@ -25,7 +25,7 @@ func main() {
 		Addr:      ":8443",
 	}
 
-	err := s.ListenAndServeTLS("../go_study/tls/server/http/www.lengchuan.study_chain.crt", "../go_study/tls/server/http/www.lengchuan.study_key.key")
+	err := s.ListenAndServeTLS("../go_study/tls/data/qingyidai.pem", "../go_study/tls/data/qingyidai.pem")
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}

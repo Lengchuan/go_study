@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	_ "fmt"
 	_ "io"
 )
@@ -26,6 +27,10 @@ type gointerface interface {
 
 func main() {
 	sayhello()
+
+	n := 363
+	fmt.Println(byte(n))
+	fmt.Println(363 >> 8)
 }
 
 func sayhello() {

@@ -17,11 +17,12 @@ import (
 type halfConn struct {
 	sync.Mutex
 
-	err            error       // first permanent error
-	version        uint16      // protocol version
-	cipher         interface{} // cipher algorithm
-	mac            macFunction
-	seq            []byte   // 64-bit sequence number
+	err     error       // first permanent error
+	version uint16      // protocol version
+	cipher  interface{} // cipher algorithm
+	mac     macFunction
+	seq     []byte // 64-bit sequence number
+	//additionalData [13]byte // to avoid allocs; interface method args escape
 	additionalData [13]byte // to avoid allocs; interface method args escape
 
 	nextCipher interface{} // next encryption state
@@ -161,8 +162,12 @@ func newSessionTicket() {
 	fmt.Println(m.ticket)
 }
 
-func applicationData() []byte {
-	f, _ := os.Open("../go_study/tls/data/applicationData.bin")
+func applicationData(req bool) []byte {
+	filename := "../go_study/tls/data/req.bin"
+	if !req {
+		filename = "../go_study/tls/data/resp.bin"
+	}
+	f, _ := os.Open(filename)
 	flows, _ := ioutil.ReadAll(f)
 	return flows
 }
@@ -210,22 +215,25 @@ func Decode() {
 	certificate := certificate()
 	serverKeyExchange := serverKeyExchange()
 	clientKeyExchange := clientKeyExchange()
-	applicationData := applicationData()
 
-	//serverCertificate, err := tls.LoadX509KeyPair("../go_study/tls/data/1.pem", "../go_study/tls/data/1.pem")
-	serverCertificate, err := tls.LoadX509KeyPair("../go_study/tls/server/http/www.lengchuan.study_chain.crt", "../go_study/tls/server/http/www.lengchuan.study_key.key")
+	isReq := false
+	applicationData := applicationData(isReq)
+
+	serverCertificate, err := tls.LoadX509KeyPair("../go_study/tls/data/qingyidai.pem", "../go_study/tls/data/qingyidai.pem")
+	//serverCertificate, err := tls.LoadX509KeyPair("../go_study/tls/server/http/www.lengchuan.study_chain.crt", "../go_study/tls/server/http/www.lengchuan.study_key.key")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	//tls 版本
 	version := serverHello.vers
+	fmt.Println("version ", version)
 	//随机数
 	clientRandom := clientHello.random
 	serverRandom := serverHello.random
 	//使用的密码套件
-	//cipherSuiteid := serverHello.cipherSuite
-	cipherSuiteid := TLS_RSA_WITH_AES_256_GCM_SHA384
+	cipherSuiteid := serverHello.cipherSuite
+	//cipherSuiteid := TLS_RSA_WITH_AES_256_GCM_SHA384
 	cipherSuite := cipherSuiteByID(cipherSuiteid)
 	//服务器私钥
 	//privateKey := serverCertificate.PrivateKey
@@ -277,35 +285,41 @@ func Decode() {
 	fmt.Println("masterSecret: ", masterSecret)
 	fmt.Println("len(masterSecret): ", len(masterSecret))
 	fmt.Println("len(applicationData): ", len(applicationData))
+	fmt.Println("applicationData: ", applicationData)
 
-	//clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV :=
-	clientMAC, _, clientKey, _, clientIV, _ :=
+	clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV :=
+		//clientMAC, _, clientKey, _, clientIV, _ :=
 		//_, serverMAC, _, serverKey, _, serverIV :=
 		keysFromMasterSecret(version, cipherSuite, masterSecret, clientRandom, serverRandom, cipherSuite.macLen, cipherSuite.keyLen, cipherSuite.ivLen)
 
-	//var serverCipher interface{}
+	var serverCipher interface{}
 	var clientCipher interface{}
-	//var serverHash macFunction
+	var serverHash macFunction
 	var clientHash macFunction
 
 	if cipherSuite.aead == nil {
 		clientCipher = cipherSuite.cipher(clientKey, clientIV, true /* for reading */)
 		clientHash = cipherSuite.mac(version, clientMAC)
-		//serverCipher = cipherSuite.cipher(serverKey, serverIV, false /* not for reading */)
-		//serverHash = cipherSuite.mac(version, serverMAC)
+		serverCipher = cipherSuite.cipher(serverKey, serverIV, false /* not for reading */)
+		serverHash = cipherSuite.mac(version, serverMAC)
 	} else {
 		clientCipher = cipherSuite.aead(clientKey, clientIV)
-		//serverCipher = cipherSuite.aead(serverKey, serverIV)
+		serverCipher = cipherSuite.aead(serverKey, serverIV)
 	}
 
 	var hc = &halfConn{
-		version:    version,
-		nextCipher: clientCipher,
-		nextMac:    clientHash,
+		version: version,
+		//nextCipher: clientCipher,
+		//nextMac:    clientHash,
 		//seq:        bs,
 	}
-	hc.cipher = hc.nextCipher
-	hc.mac = hc.nextMac
+	if isReq {
+		hc.cipher = clientCipher
+		hc.mac = clientHash
+	} else {
+		hc.cipher = serverCipher
+		hc.mac = serverHash
+	}
 
 	plaintext, typ, err := hc.decrypt(applicationData)
 	if err != nil {
@@ -364,6 +378,8 @@ func (hc *halfConn) decrypt(record []byte) ([]byte, recordType, error) {
 			fmt.Println("nonce: ", nonce)
 			fmt.Println("additionalData: ", additionalData)
 			fmt.Println("payload: ", payload)
+			fmt.Println("len(payload): ", len(payload))
+			fmt.Println("c.Overhead(): ", c.Overhead())
 			fmt.Println(fmt.Sprintf("cipher %s:", c))
 			var err error
 			plaintext, err = c.Open(payload[:0], nonce, payload, additionalData)
