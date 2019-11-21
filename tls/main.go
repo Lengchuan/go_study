@@ -17,12 +17,11 @@ import (
 type halfConn struct {
 	sync.Mutex
 
-	err     error       // first permanent error
-	version uint16      // protocol version
-	cipher  interface{} // cipher algorithm
-	mac     macFunction
-	seq     []byte // 64-bit sequence number
-	//additionalData [13]byte // to avoid allocs; interface method args escape
+	err            error       // first permanent error
+	version        uint16      // protocol version
+	cipher         interface{} // cipher algorithm
+	mac            macFunction
+	seq            []byte   // 64-bit sequence number
 	additionalData [13]byte // to avoid allocs; interface method args escape
 
 	nextCipher interface{} // next encryption state
@@ -69,6 +68,13 @@ func main() {
 	//applicationData()
 
 	Decode()
+
+	//finish()
+
+	//var b cryptobyte.Builder
+	//b.AddUint8(typeFinished)
+	//ba :=b.BytesOrPanic()
+	//fmt.Println(ba)
 }
 
 func clientHello() (m clientHelloMsg) {
@@ -162,6 +168,20 @@ func newSessionTicket() {
 	fmt.Println(m.ticket)
 }
 
+func finish() {
+	f, _ := os.Open("../go_study/tls/data/1.bin")
+	flows, _ := ioutil.ReadAll(f)
+	//var m finishedMsg
+	//b :=m.unmarshal(flows[5:])
+	//b :=m.unmarshal(flows[:])
+	//fmt.Println(b)
+	//fmt.Println(m.raw)
+	//fmt.Println(m.verifyData)
+	fmt.Println(flows)
+
+	return
+}
+
 func applicationData(req bool) []byte {
 	filename := "../go_study/tls/data/req.bin"
 	if !req {
@@ -213,10 +233,10 @@ func Decode() {
 	clientHello := clientHello()
 	serverHello := serverHello()
 	certificate := certificate()
-	serverKeyExchange := serverKeyExchange()
+	//serverKeyExchange := serverKeyExchange()
 	clientKeyExchange := clientKeyExchange()
 
-	isReq := false
+	isReq := true
 	applicationData := applicationData(isReq)
 
 	serverCertificate, err := tls.LoadX509KeyPair("../go_study/tls/data/qingyidai.pem", "../go_study/tls/data/qingyidai.pem")
@@ -240,13 +260,13 @@ func Decode() {
 
 	//ECDH 算法 参数
 	keyAgreement := cipherSuite.ka(version)
-	curveType := serverKeyExchange.raw[4:5]
-	curveName := serverKeyExchange.raw[5:7]
-	pub := serverKeyExchange.key
+	//curveType := serverKeyExchange.raw[4:5]
+	//curveName := serverKeyExchange.raw[5:7]
+	//pub := serverKeyExchange.key
 
-	fmt.Println("curveType ", curveType)
-	fmt.Println("curveName ", curveName)
-	fmt.Println("pub ", pub)
+	//fmt.Println("curveType ", curveType)
+	//fmt.Println("curveName ", curveName)
+	//fmt.Println("pub ", pub)
 
 	//ecdheParameters, err := generateECDHEParameters(rand.Reader, CurveID(curveName[1]))
 	//ka, ok := keyAgreement.(*ecdheKeyAgreement)
@@ -277,6 +297,7 @@ func Decode() {
 
 	masterSecret := masterFromPreMasterSecret(version, cipherSuite, preMasterSecret, clientRandom, serverRandom)
 
+	fmt.Println("version: ", version)
 	fmt.Println("client random: ", clientRandom)
 	fmt.Println("len client random: ", len(clientRandom))
 	fmt.Println("server random: ", serverRandom)
@@ -298,9 +319,9 @@ func Decode() {
 	var clientHash macFunction
 
 	if cipherSuite.aead == nil {
-		clientCipher = cipherSuite.cipher(clientKey, clientIV, true /* for reading */)
+		clientCipher = cipherSuite.cipher(clientKey, clientIV, isReq /* for reading */)
 		clientHash = cipherSuite.mac(version, clientMAC)
-		serverCipher = cipherSuite.cipher(serverKey, serverIV, false /* not for reading */)
+		serverCipher = cipherSuite.cipher(serverKey, serverIV, !isReq /* not for reading */)
 		serverHash = cipherSuite.mac(version, serverMAC)
 	} else {
 		clientCipher = cipherSuite.aead(clientKey, clientIV)
@@ -321,12 +342,11 @@ func Decode() {
 		hc.mac = serverHash
 	}
 
-	plaintext, typ, err := hc.decrypt(applicationData)
+	plaintext, _, err := hc.decrypt(applicationData)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(fmt.Sprintf("plaintext: %v", plaintext))
-	fmt.Println(fmt.Sprintf("type: %v", typ))
+	fmt.Println("plaintext:\r\n", string(plaintext))
 
 }
 
@@ -357,7 +377,8 @@ func (hc *halfConn) decrypt(record []byte) ([]byte, recordType, error) {
 				//return nil, 0, tls.alertBadRecordMAC
 				return nil, 0, nil
 			}
-			nonce := payload[:explicitNonceLen]
+			//nonce := payload[:explicitNonceLen]
+			nonce := []byte{0, 0, 0, 0, 0, 0, 0, 2}
 			//if len(nonce) == 0 {
 			//	nonce = hc.seq[:]
 			//}
@@ -380,7 +401,7 @@ func (hc *halfConn) decrypt(record []byte) ([]byte, recordType, error) {
 			fmt.Println("payload: ", payload)
 			fmt.Println("len(payload): ", len(payload))
 			fmt.Println("c.Overhead(): ", c.Overhead())
-			fmt.Println(fmt.Sprintf("cipher %s:", c))
+			fmt.Println(fmt.Sprintf("cipher %v:", c))
 			var err error
 			plaintext, err = c.Open(payload[:0], nonce, payload, additionalData)
 			if err != nil {
@@ -390,6 +411,138 @@ func (hc *halfConn) decrypt(record []byte) ([]byte, recordType, error) {
 
 			fmt.Println("plaintext ", plaintext)
 			fmt.Println("plaintext ", string(plaintext))
+		case cbcMode:
+			blockSize := c.BlockSize()
+			minPayload := explicitNonceLen + roundUp(hc.mac.Size()+1, blockSize)
+			if len(payload)%blockSize != 0 || len(payload) < minPayload {
+				//return nil, 0, alertBadRecordMAC
+				return nil, 0, nil
+			}
+
+			if explicitNonceLen > 0 {
+				c.SetIV(payload[:explicitNonceLen])
+				payload = payload[explicitNonceLen:]
+			}
+			c.CryptBlocks(payload, payload)
+
+			// In a limited attempt to protect against CBC padding oracles like
+			// Lucky13, the data past paddingLen (which is secret) is passed to
+			// the MAC function as extra data, to be fed into the HMAC after
+			// computing the digest. This makes the MAC roughly constant time as
+			// long as the digest computation is constant time and does not
+			// affect the subsequent write, modulo cache effects.
+			if hc.version == VersionSSL30 {
+				paddingLen, paddingGood = extractPaddingSSL30(payload)
+			} else {
+				paddingLen, paddingGood = extractPadding(payload)
+			}
+		default:
+			panic("unknown cipher type")
+		}
+
+		if hc.version == VersionTLS13 {
+			if typ != recordTypeApplicationData {
+				//return nil, 0, alertUnexpectedMessage
+				return nil, 0, nil
+			}
+			if len(plaintext) > maxPlaintext+1 {
+				//return nil, 0, alertRecordOverflow
+				return nil, 0, nil
+			}
+			// Remove padding and find the ContentType scanning from the end.
+			for i := len(plaintext) - 1; i >= 0; i-- {
+				if plaintext[i] != 0 {
+					typ = recordType(plaintext[i])
+					plaintext = plaintext[:i]
+					break
+				}
+				if i == 0 {
+					//return nil, 0, alertUnexpectedMessage
+					return nil, 0, nil
+				}
+			}
+		}
+	} else {
+		plaintext = payload
+	}
+
+	if hc.mac != nil {
+		macSize := hc.mac.Size()
+		if len(payload) < macSize {
+			//return nil, 0, alertBadRecordMAC
+			return nil, 0, nil
+		}
+
+		n := len(payload) - macSize - paddingLen
+		n = subtle.ConstantTimeSelect(int(uint32(n)>>31), 0, n) // if n < 0 { n = 0 }
+		//record[3] = byte(n >> 8)
+		//record[4] = byte(n)
+		//remoteMAC := payload[n : n+macSize]
+		//localMAC := hc.mac.MAC(hc.seq[0:], record[:recordHeaderLen], payload[:n], payload[n+macSize:])
+
+		fmt.Println(paddingGood)
+		//if subtle.ConstantTimeCompare(localMAC, remoteMAC) != 1 || paddingGood != 255 {
+		//	//return nil, 0, alertBadRecordMAC
+		//	return nil, 0, nil
+		//}
+
+		plaintext = payload[:n]
+	}
+
+	//hc.incSeq()
+	return plaintext, typ, nil
+}
+
+// decrypt authenticates and decrypts the record if protection is active at
+// this stage. The returned plaintext might overlap with the input.
+func (hc *halfConn) decrypt1(record []byte) ([]byte, recordType, error) {
+	var plaintext []byte
+	typ := recordType(record[0])
+	payload := record[recordHeaderLen:]
+
+	// In TLS 1.3, change_cipher_spec messages are to be ignored without being
+	// decrypted. See RFC 8446, Appendix D.4.
+	if hc.version == VersionTLS13 && typ == recordTypeChangeCipherSpec {
+		return payload, typ, nil
+	}
+
+	paddingGood := byte(255)
+	paddingLen := 0
+
+	explicitNonceLen := hc.explicitNonceLen()
+
+	if hc.cipher != nil {
+		switch c := hc.cipher.(type) {
+		case cipher.Stream:
+			c.XORKeyStream(payload, payload)
+		case aead:
+			if len(payload) < explicitNonceLen {
+				//return nil, 0, alertBadRecordMAC
+				return nil, 0, nil
+			}
+			nonce := payload[:explicitNonceLen]
+			if len(nonce) == 0 {
+				nonce = hc.seq[:]
+			}
+			payload = payload[explicitNonceLen:]
+
+			additionalData := hc.additionalData[:]
+			if hc.version == VersionTLS13 {
+				additionalData = record[:recordHeaderLen]
+			} else {
+				copy(additionalData, hc.seq[:])
+				copy(additionalData[8:], record[:3])
+				n := len(payload) - c.Overhead()
+				additionalData[11] = byte(n >> 8)
+				additionalData[12] = byte(n)
+			}
+
+			var err error
+			plaintext, err = c.Open(payload[:0], nonce, payload, additionalData)
+			if err != nil {
+				//return nil, 0, alertBadRecordMAC
+				return nil, 0, nil
+			}
 		case cbcMode:
 			blockSize := c.BlockSize()
 			minPayload := explicitNonceLen + roundUp(hc.mac.Size()+1, blockSize)

@@ -11,6 +11,7 @@ require (
 	github.com/rifflock/lfshook v0.0.0-20180920164130-b9218ef580f5
 	github.com/samuel/go-zookeeper v0.0.0-20190923202752-2cc03de413da
 	github.com/sirupsen/logrus v1.4.3-0.20191026113918-67a7fdcf741f
+	github.com/xiayuguo/aes v0.0.0-20191106100547-e98f71c0e16c
 	go.uber.org/zap v1.12.0 // indirect
 	golang.org/x/crypto v0.0.0-20190510104115-cbcb75029529
 	golang.org/x/sys v0.0.0-20190422165155-953cdadca894

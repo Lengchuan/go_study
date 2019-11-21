@@ -9,26 +9,26 @@ func main() {
 	c := [2]int{1, 2}
 	d := [...]int{1, 2, 3, 4, 5}
 	//索引赋值
-	e := [...] int{0: 1, 1: 2, 2: 3}
-	f := [...] int{19: 1}
+	e := [...]int{0: 1, 1: 2, 2: 3}
+	f := [...]int{19: 1}
 
 	//指针数组
-	var g *[20] int = &f
+	var g *[20]int = &f
 
 	x, y := 1, 2
 	h := [...]*int{&x, &y}
 
 	// == 和！=比较
 
-	i := [...] int{1, 2}
-	j := [...] int{1, 2}
+	i := [...]int{1, 2}
+	j := [...]int{1, 2}
 
 	//new
 	k := new([10]int)
 
 	//多维数组
 
-	l := [2][3] int{
+	l := [2][3]int{
 		{1, 2, 3},
 		{1, 2, 3}}
 
@@ -46,7 +46,7 @@ func main() {
 	fmt.Println(k[0])
 	fmt.Println(&k[0])
 	fmt.Println(&k[1])
-	fmt.Println(&k[2 ])
+	fmt.Println(&k[2])
 	fmt.Println(&k[3])
 	fmt.Println(&k[4])
 	fmt.Println(l)
@@ -54,4 +54,6 @@ func main() {
 	fmt.Println(l[0][2])
 	fmt.Println(l)
 
+	m := [...]int{0, 1, 2, 3, 4, 5, 6, 7}
+	fmt.Println("m[0:2] ", m[0:2])
 }
