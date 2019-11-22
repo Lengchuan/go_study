@@ -236,11 +236,10 @@ func Decode() {
 	//serverKeyExchange := serverKeyExchange()
 	clientKeyExchange := clientKeyExchange()
 
-	isReq := true
+	isReq := false
 	applicationData := applicationData(isReq)
 
-	serverCertificate, err := tls.LoadX509KeyPair("../go_study/tls/data/qingyidai.pem", "../go_study/tls/data/qingyidai.pem")
-	//serverCertificate, err := tls.LoadX509KeyPair("../go_study/tls/server/http/www.lengchuan.study_chain.crt", "../go_study/tls/server/http/www.lengchuan.study_key.key")
+	serverCertificate, err := tls.LoadX509KeyPair("../go_study/tls/server/http/www.lengchuan.study_chain.crt", "../go_study/tls/server/http/www.lengchuan.study_key.key")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -342,6 +341,13 @@ func Decode() {
 		hc.mac = serverHash
 	}
 
+	fmt.Println("ClientMAC: ", clientMAC)
+	fmt.Println("ServerMAC: ", serverMAC)
+	fmt.Println("ClientKey: ", clientKey)
+	fmt.Println("ServerKey: ", serverKey)
+	fmt.Println("ClientIV: ", clientIV)
+	fmt.Println("ServerIV: ", serverIV)
+
 	plaintext, _, err := hc.decrypt(applicationData)
 	if err != nil {
 		log.Fatal(err)
@@ -377,8 +383,7 @@ func (hc *halfConn) decrypt(record []byte) ([]byte, recordType, error) {
 				//return nil, 0, tls.alertBadRecordMAC
 				return nil, 0, nil
 			}
-			//nonce := payload[:explicitNonceLen]
-			nonce := []byte{0, 0, 0, 0, 0, 0, 0, 2}
+			nonce := payload[:explicitNonceLen]
 			//if len(nonce) == 0 {
 			//	nonce = hc.seq[:]
 			//}
